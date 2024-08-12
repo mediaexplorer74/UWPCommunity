@@ -1,20 +1,32 @@
-[![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/Naereen/StrapDown.js/blob/master/LICENSE)
-[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](http://makeapullrequest.com)
+# UWPCommunity 1.5 -- dev branch
+My fork of [UWPCommunityApp project](https://github.com/WindowsAppCommunity/UWPCommunityApp).
 
-# !NOTICE!
-This app is not currently being maintained. Development will resume when the the UWP Community backend goes live.
+# About
+A companion app for the [UWP Community website](https://uwpcommunity.com). I tried to "return" (flashback) W10M compatibility. ;)
 
-# UWP Community app
-A companion app for the [UWP Community website](https://uwpcommunity.com)
+## Screenshot
+![Win11Tiny](/Images/shot01.png)
 
-Store link: https://www.microsoft.com/store/apps/9PJW4588MKV0
+
+## Tech. moments
+- Win. SDK 19041
+- Min. Win. SDK 15063 (Hello, Lumia 950/950XL, etc.))
+- UWP
+- x64 or ARM (as you wish)))
+
 
 ## Contributors' guide
-If you wish to make contributions or checkout in-development features, we recommend cloning the `dev` branch.
-The `master` branch is intended to be the current state of the current version of the app available in the Microsoft Store.
-The `dev` branch is the next update for the Store version. Any other branches are for specific features that aren't targeting
-the next release, or are completely experimental.
+If you wish to make contributions or checkout in-development features, I recommend cloning the `dev` branch.
 
-**Please, do not commit or merge directly into the `master` branch!**
 
-## Screenshots
+## Credits
+https://github.com/WindowsAppCommunity/UWPCommunityApp Original UWP companion app (Win 10 / 11 "desktop edition")
+
+
+## ..
+As is. No support. Research purposes only :)
+
+## .
+[m][e] 2024
+
+
