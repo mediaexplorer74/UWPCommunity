@@ -2,13 +2,11 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
-using UwpCommunityBackend.Models;
+using UWPCommLib.Api.UWPComm.Models;
 using Windows.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
 using System.Net.Http;
-using UWPCommunity.ViewModels;
-using UwpCommunityBackend;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
 
@@ -19,19 +17,15 @@ namespace UWPCommunity.Views
     /// </summary>
     public sealed partial class ProjectsView : Page
     {
-        public double CardWidth { get; set; }
-        public double CardHeight { get; set; }
+        private List<Project> AllProjects { get; set; }
+        public ObservableCollection<Project> Projects { get; set; } = new ObservableCollection<Project>();
 
         public ProjectsView()
         {
             InitializeComponent();
+            Loaded += ProjectsView_Loaded;
 
-            var cardSize = SettingsManager.GetProjectCardSize();
-            CardWidth = cardSize.X;
-            CardHeight = cardSize.Y;
-
-            foreach (var category in Enum.GetValues(typeof(Project.ProjectCategory))
-                .Cast<Project.ProjectCategory>())
+            foreach (var category in Enum.GetValues(typeof(Project.ProjectCategory)).Cast<Project.ProjectCategory>())
             {
                 var menuItem = new RadioMenuFlyoutItem()
                 {
@@ -43,16 +37,24 @@ namespace UWPCommunity.Views
             RefreshProjects();
         }
 
+        private void ProjectsView_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
+        {
+            var cardSize = SettingsManager.GetProjectCardSize();
+            ProjectsGridView.DesiredWidth = cardSize.X;
+            ProjectsGridView.ItemHeight = cardSize.Y;
+        }
+
         private async void RefreshProjects()
         {
             try
             {
-                var projs = (await Api.GetProjects()).OrderBy(x => x.AppName);
-                foreach (var project in projs)
+                var projs = (await Common.UwpCommApi.GetProjects()).OrderBy(x => x.AppName);
+                Projects = new ObservableCollection<Project>(projs);
+                AllProjects = Projects.ToList();
+                if (ProjectsGridView.Items.Count != Projects.Count)
                 {
-                    ViewModel.Projects.Add(new ProjectViewModel(project));
+                    Bindings.Update();
                 }
-                ViewModel.AllProjects = ViewModel.Projects.ToList();
                 LoadingIndicator.Visibility = Windows.UI.Xaml.Visibility.Collapsed;
             }
             catch (HttpRequestException ex)
@@ -64,112 +66,62 @@ namespace UWPCommunity.Views
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Projects: Navigated to",
+                new Dictionary<string, string> {
+                    { "From", e.SourcePageType.Name },
+                    { "Parameters", e.Parameter?.ToString() }
+                }
+            );
         }
 
         private async void ExternalLinkButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
         {
-            Project project = null;
-            if ((sender as Button)?.DataContext is Project _proj)
-            {
-                project = _proj;
-            }
-            else if ((sender as Button)?.DataContext is ProjectViewModel _projVM)
-            {
-                project = _projVM.Project;
-            }
-
-            if (project != null)
-            {
-                await NavigationManager.OpenInBrowser(project.ExternalLink);               
-            }
-            else
-            {
-                // Tell the user that the link could not be opened
-                ContentDialog dialog = new ContentDialog
-                {
-                    Title = "Error",
-                    Content = "Could not open external link",
-                    CloseButtonText = "Ok",
-                    RequestedTheme = SettingsManager.GetAppTheme()
-                };
-                ContentDialogResult result = await dialog.ShowAsync();
-            }
+            var project = (sender as Button)?.DataContext as Project;
+            await NavigationManager.OpenInBrowser(project.ExternalLink);
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Proj: External link badge clicked",
+                new Dictionary<string, string> {
+                    { "Proj", project.Id.ToString() },
+                }
+            );
         }
 
         private async void GitHubLinkButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
         {
-            Project project = null;
-            if ((sender as Button)?.DataContext is Project _proj)
-            {
-                project = _proj;
-            }
-            else if ((sender as Button)?.DataContext is ProjectViewModel _projVM)
-            {
-                project = _projVM.Project;
-            }
-
-            if (project != null)
-            {
-                await NavigationManager.OpenInBrowser(project.GitHubLink);              
-            }
-            else
-            {
-                // Tell the user that the link could not be opened
-                ContentDialog dialog = new ContentDialog
-                {
-                    Title = "Error",
-                    Content = "Could not open GitHub link",
-                    CloseButtonText = "Ok",
-                    RequestedTheme = SettingsManager.GetAppTheme()
-                };
-                ContentDialogResult result = await dialog.ShowAsync();
-            }
+            var project = (sender as Button)?.DataContext as Project;
+            await NavigationManager.OpenInBrowser(project.GitHubLink);
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Proj: GitHub link badge clicked",
+                new Dictionary<string, string> {
+                    { "Proj", project.Id.ToString() },
+                }
+            );
         }
 
         private async void DownloadLinkButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
         {
-            Project project = null;
-            if ((sender as Button)?.DataContext is Project _proj)
-			{
-                project = _proj;
-			}
-            else if ((sender as Button)?.DataContext is ProjectViewModel _projVM)
-            {
-                project = _projVM.Project;
-            }
-
-            if (project != null)
-			{
-                await NavigationManager.OpenInBrowser(project.DownloadLink);                
-            }
-            else
-			{
-                // Tell the user that the link could not be opened
-                ContentDialog dialog = new ContentDialog
-                {
-                    Title = "Error",
-                    Content = "Could not open download link",
-                    CloseButtonText = "Ok",
-                    RequestedTheme = SettingsManager.GetAppTheme()
-                };
-                ContentDialogResult result = await dialog.ShowAsync();
-            }
+            var project = (sender as Button)?.DataContext as Project;
+            await NavigationManager.OpenInBrowser(project.DownloadLink);
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Proj: Download link badge clicked",
+                new Dictionary<string, string> {
+                    { "Proj", project.Id.ToString() },
+                }
+            );
         }
 
         private void Project_ViewRequested(object p)
         {
-            ViewProject((p as ProjectViewModel).Project);
+            ViewProject(p as Project);
         }
 
         private void ViewProject(Project item)
         {
-            //ProjectsGridView.PrepareConnectedAnimation("projectView", item, "HeroImageStartCtl");
+            ProjectsGridView.PrepareConnectedAnimation("projectView", item, "HeroImageStartCtl");
             NavigationManager.NavigateToViewProject(item);
         }
 
         private void ProjectsGridView_ItemClick(object sender, ItemClickEventArgs e)
         {
-            ViewProject((e.ClickedItem as ProjectViewModel).Project);
+            ViewProject(e.ClickedItem as Project);
         }
 
         private void RefreshContainer_RefreshRequested(Microsoft.UI.Xaml.Controls.RefreshContainer sender, Microsoft.UI.Xaml.Controls.RefreshRequestedEventArgs args)
@@ -186,7 +138,6 @@ namespace UWPCommunity.Views
         {
             CategoryButton.IsChecked = true;
             SearchBox.Text = "";
-            // TODO: Check for null here
             var option = sender as RadioMenuFlyoutItem;
             FilterByCategory(option.Text);
             Bindings.Update();
@@ -203,7 +154,7 @@ namespace UWPCommunity.Views
             else
             {
                 // Filter is disabled
-                ViewModel.Projects = new ObservableCollection<ProjectViewModel>(ViewModel.AllProjects);
+                Projects = new ObservableCollection<Project>(AllProjects);
                 // Must call Sort() here because FilterByCategory() won't
                 // do it for us in this branch
                 Sort();
@@ -215,25 +166,30 @@ namespace UWPCommunity.Views
         {
             if (String.IsNullOrWhiteSpace(query))
             {
-                ViewModel.Projects = new ObservableCollection<ProjectViewModel>(ViewModel.AllProjects);
+                Projects = new ObservableCollection<Project>(AllProjects);
                 Bindings.Update();
                 return;
             }
-            var results = ViewModel.AllProjects.Where(x =>
-                x.Project.AppName.ToLower().Contains(query.ToLower()) ||
-                x.Project.Description.ToLower().Contains(query.ToLower()));
+            var results = AllProjects.Where(x =>
+                x.AppName.ToLower().Contains(query.ToLower()) ||
+                x.Description.ToLower().Contains(query.ToLower()));
 
             if (CategoryButton.IsChecked)
                 FilterByCategory(collection: results);
             else
                 Sort(collection: results);
+
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Projects: Search",
+                new Dictionary<string, string> {
+                    { "Query", query },
+                }
+            );
         }
 
-        private void FilterByCategory(string category = null, 
-            IEnumerable<ProjectViewModel> collection = null)
+        private void FilterByCategory(string category = null, IEnumerable<Project> collection = null)
         {
             if (collection == null)
-                collection = ViewModel.AllProjects;
+                collection = AllProjects;
 
             if (category == null)
             {
@@ -243,58 +199,68 @@ namespace UWPCommunity.Views
                     ? ((RadioMenuFlyoutItem)CategoryFlyout.Items[0]).Text : option.Text;
             }
 
-            Sort(collection: collection.Where(x => x.Project.Category.Equals(category)));
+            Sort(collection: collection.Where(x => x.Category.Equals(category)));
 
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Projects: Category filter",
+                new Dictionary<string, string> {
+                    { "Category", category },
+                }
+            );
         }
 
-        private void Sort(string mode = null, IEnumerable<ProjectViewModel> collection = null)
+        private void Sort(string mode = null, IEnumerable<Project> collection = null)
         {
             if (collection == null)
-                collection = ViewModel.AllProjects;
+                collection = AllProjects;
             if (mode == null)
             {
                 var sortOption = (RadioMenuFlyoutItem)SortFlyout.Items.First(i => (i as RadioMenuFlyoutItem).IsChecked);
                 mode = sortOption.Text;
             }
 
-            IOrderedEnumerable<ProjectViewModel> sorted;
+            IOrderedEnumerable<Project> sorted;
             switch (mode)
             {
                 case "Alphabetical (A-Z)":
-                    sorted = collection.OrderBy(x => x.Project.AppName);
+                    sorted = collection.OrderBy(x => x.AppName);
                     break;
                 case "Alphabetical (Z-A)":
-                    sorted = collection.OrderByDescending(x => x.Project.AppName);
+                    sorted = collection.OrderByDescending(x => x.AppName);
                     break;
 
                 case "Date Created (Latest-Oldest)":
-                    sorted = collection.OrderByDescending(x => DateTime.Parse(x.Project.CreatedAt));
+                    sorted = collection.OrderByDescending(x => DateTime.Parse(x.CreatedAt));
                     break;
                 case "Date Created (Oldest-Latest)":
-                    sorted = collection.OrderBy(x => DateTime.Parse(x.Project.CreatedAt));
+                    sorted = collection.OrderBy(x => DateTime.Parse(x.CreatedAt));
                     break;
 
                 case "Last Modified (Latest-Oldest)":
-                    sorted = collection.OrderByDescending(x => DateTime.Parse(x.Project.UpdatedAt));
+                    sorted = collection.OrderByDescending(x => DateTime.Parse(x.UpdatedAt));
                     break;
                 case "Last Modified (Oldest-Latest)":
-                    sorted = collection.OrderBy(x => DateTime.Parse(x.Project.UpdatedAt));
+                    sorted = collection.OrderBy(x => DateTime.Parse(x.UpdatedAt));
                     break;
 
                 case "Launch Year (Latest-Oldest)":
-                    sorted = collection.OrderByDescending(x => x.Project.GetLastLaunchYear() ?? 0);
+                    sorted = collection.OrderByDescending(x => x.LaunchYear);
                     break;
                 case "Launch Year (Oldest-Latest)":
-                    sorted = collection.OrderBy(x => x.Project.GetLastLaunchYear() ?? 0);
+                    sorted = collection.OrderBy(x => x.LaunchYear);
                     break;
 
                 default:
-                    sorted = collection.OrderBy(x => x.Project.AppName);
+                    sorted = collection.OrderBy(x => x.AppName);
                     break;
             }
-            ViewModel.Projects = new ObservableCollection<ProjectViewModel>(sorted);
+            Projects = new ObservableCollection<Project>(sorted);
             Bindings.Update();
-          
+
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Projects: Sort",
+                new Dictionary<string, string> {
+                    { "Mode", mode },
+                }
+            );
         }
 
         private void SearchBox_QuerySubmitted(AutoSuggestBox sender, AutoSuggestBoxQuerySubmittedEventArgs args)

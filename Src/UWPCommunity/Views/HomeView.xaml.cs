@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using UwpCommunityBackend.Models;
+using UWPCommLib.Api.UWPComm.Models;
 using UWPCommunity.Views.Dialogs;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -19,33 +19,38 @@ namespace UWPCommunity.Views
         {
             this.InitializeComponent();
             Loaded += HomeView_Loaded;
+
+            ShowLatestAppMessage();
         }
 
         private async void HomeView_Loaded(object sender, RoutedEventArgs e)
         {
             // Get the card information from the website frontend
-            var card = (await UwpCommunityBackend.Api.GetCard("home")).Main;
+            var response = await new System.Net.Http.HttpClient().GetAsync("https://raw.githubusercontent.com/UWPCommunity/uwpcommunity.github.io/master/assets/views/home.json");
+            string json = await response.Content.ReadAsStringAsync();
+            var card = Newtonsoft.Json.JsonConvert.DeserializeObject<CardInfoResponse>(json).Main;
             CardSubtitle.Text = card.Subtitle;
-            CardDetails.Text = String.Join("\r\n", card.Details);
-            try
-            {
-                SettingsManager.ApplyLiveTile(SettingsManager.GetShowLiveTile());
-            }
-            catch (Flurl.Http.FlurlHttpException)
-            {
-                var appFrame = Window.Current.Content as Frame;
-                appFrame.Navigate(typeof(Subviews.NoInternetPage));
-            }
+            CardDetails.Text = String.Join(" ", card.Details);
+
+            SettingsManager.ApplyLiveTile(SettingsManager.GetShowLiveTile());
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Home: Navigated to",
+                new Dictionary<string, string> {
+                    { "From", e.SourcePageType.Name },
+                    { "Parameters", e.Parameter?.ToString() }
+                }
+            );
         }
 
         private async void DiscordButton_Click(object sender, RoutedEventArgs e)
         {
-            await NavigationManager.OpenDiscordInvite(Common.DISCORD_INVITE);            
+            await NavigationManager.OpenDiscordInvite("eBHZSKG");
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Home: Discord button clicked");
         }
 
         private void Launch2020Button_Click(object sender, RoutedEventArgs e)
@@ -55,12 +60,30 @@ namespace UWPCommunity.Views
 
         private async void GitHubButton_Click(object sender, RoutedEventArgs e)
         {
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Home: GitHub button clicked");
             await NavigationManager.OpenInBrowser("https://github.com/UWPCommunity/");
         }
 
-        private async void LaunchButton_Click(object sender, RoutedEventArgs e)
+        private async void Launch2019Button_Click(object sender, RoutedEventArgs e)
         {
-            await NavigationManager.OpenInBrowser("https://medium.com/@Arlodottxt/uwp-community-launch-2020-1772efb1e382");
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Home: Launch 2019 button clicked");
+            await NavigationManager.OpenInBrowser("https://medium.com/@Arlodottxt/launch-2019-7efd37cc0877");
+        }
+
+        private async void ShowLatestAppMessage()
+        {
+            int level = SettingsManager.AppMessageSettings.GetImportanceLevel();
+            if (level == 0)
+                return;
+
+            // Load most recent app message
+            var message = (await Common.YoshiApi.GetAppMessages("UWPCommunity", 0))[0];
+            if (message.Id != SettingsManager.AppMessageSettings.GetLastAppMessageId()
+                && message.Importance <= level)
+            {
+                await new AppMessageDialog(message).ShowAsync();
+                SettingsManager.AppMessageSettings.SetLastAppMessageId(message.Id);
+            }
         }
     }
 }

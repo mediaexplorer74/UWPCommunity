@@ -1,7 +1,8 @@
 ﻿using Microsoft.Toolkit.Uwp.UI.Controls;
 using System;
+using System.Collections.ObjectModel;
 using System.Net.Http;
-using UwpCommunityBackend.Models;
+using UWPCommLib.Api.UWPComm.Models;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Input;
@@ -17,6 +18,13 @@ namespace UWPCommunity.Views
     /// </summary>
     public sealed partial class LaunchView : Page
     {
+        public ObservableCollection<Project> LaunchProjects { get; set; } = new ObservableCollection<Project>();
+        public Project PersistantProject;
+
+        public string CardTitle { get; set; }
+        public string CardSubtitle { get; set; }
+        public string CardDetails { get; set; }
+
         public LaunchView()
         {
             InitializeComponent();
@@ -30,7 +38,13 @@ namespace UWPCommunity.Views
 
             try
             {
-                await ViewModel.InitializeAsync();
+                // Get the card information from the website frontend
+                var response = await new HttpClient().GetAsync("https://raw.githubusercontent.com/UWPCommunity/uwpcommunity.github.io/master/assets/views/launch.json");
+                string json = await response.Content.ReadAsStringAsync();
+                var card = Newtonsoft.Json.JsonConvert.DeserializeObject<CardInfoResponse>(json).Main;
+                CardTitle = card.Title;
+                CardSubtitle = card.Subtitle;
+                CardDetails = String.Join(" ", card.Details);
             }
             catch (HttpRequestException ex)
             {
@@ -42,7 +56,12 @@ namespace UWPCommunity.Views
         {
             try
             {
-                await ViewModel.RefreshProjects();
+                var launch = await Common.UwpCommApi.GetLaunchProjects(2020);
+                LaunchProjects = new ObservableCollection<Project>(launch.Projects);
+                if (ParticipantsGridView.Items.Count != LaunchProjects.Count)
+                {
+                    Bindings.Update();
+                }
                 LoadingIndicator.Visibility = Visibility.Collapsed;
             }
             catch (HttpRequestException e)
@@ -53,10 +72,29 @@ namespace UWPCommunity.Views
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            ViewModel.PersistantProject = e.Parameter as Project;           
+            PersistantProject = e.Parameter as Project;
+
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Launch: Navigated to",
+                new System.Collections.Generic.Dictionary<string, string> {
+                    { "From", e.SourcePageType.Name },
+                    { "Parameters", e.Parameter?.ToString() }
+                }
+            );
         }
 
-        private void LaunchButton_Click(object sender, RoutedEventArgs e)
+        private void Card_PointerEntered(object sender, PointerRoutedEventArgs e)
+        {
+            Storyboard sb = ((DropShadowPanel)sender).Resources["EnterStoryboard"] as Storyboard;
+            sb.Begin();
+        }
+
+        private void Card_PointerExited(object sender, PointerRoutedEventArgs e)
+        {
+            Storyboard sb = ((DropShadowPanel)sender).Resources["ExitStoryboard"] as Storyboard;
+            sb.Begin();
+        }
+
+        private void Launch2020Button_Click(object sender, RoutedEventArgs e)
         {
             NavigationManager.NavigateToDashboard();
         }
@@ -64,24 +102,22 @@ namespace UWPCommunity.Views
         private void ParticipantsGridView_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             Project item = ParticipantsGridView.SelectedItem as Project;
-            if (item == null)
-                return;
-            //ParticipantsGridView.PrepareConnectedAnimation("projectView", item, "HeroImageStartCtl");
+            ParticipantsGridView.PrepareConnectedAnimation("projectView", item, "HeroImageStartCtl");
             NavigationManager.NavigateToViewProject(item);
         }
 
-        private void ParticipantsGridView_Loaded(object sender, RoutedEventArgs e)
+        private async void ParticipantsGridView_Loaded(object sender, RoutedEventArgs e)
         {
-            if (ViewModel.PersistantProject != null)
+            if (PersistantProject != null)
             {
-                ParticipantsGridView.ScrollIntoView(ViewModel.PersistantProject);
-                //ConnectedAnimation animation =
-                //    ConnectedAnimationService.GetForCurrentView().GetAnimation("projectView");
-                //if (animation != null)
-                //{
-                //    await ParticipantsGridView.TryStartConnectedAnimationAsync(
-                //        animation, PersistantProject, "HeroImageStartCtl");
-                //}
+                ParticipantsGridView.ScrollIntoView(PersistantProject);
+                ConnectedAnimation animation =
+                    ConnectedAnimationService.GetForCurrentView().GetAnimation("projectView");
+                if (animation != null)
+                {
+                    await ParticipantsGridView.TryStartConnectedAnimationAsync(
+                        animation, PersistantProject, "HeroImageStartCtl");
+                }
             }
         }
 

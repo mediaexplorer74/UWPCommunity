@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
-//using System.Web;
+using System.Web;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Graphics.Display;
@@ -28,7 +28,7 @@ namespace UWPCommunity.Views.Subviews
     /// </summary>
     public sealed partial class LlamaBingo : Page
     {
-        public ObservableCollection<string> RecentBoards { get; set; } = new ObservableCollection<string>();
+        public static ObservableCollection<string> RecentBoards { get; set; } = new ObservableCollection<string>();
 
         public LlamaBingo()
         {
@@ -44,24 +44,24 @@ namespace UWPCommunity.Views.Subviews
                 CompactOverlayButton.Visibility = Visibility.Collapsed;
             }
 
+            Bingo.BoardChanged += Bingo_BoardChanged;
+
             var savedBoard = SettingsManager.GetSavedLlamaBingo();
             if (savedBoard != null)
             {
                 Bingo.SetByDataString(savedBoard);
             }
-
-            Bingo.BoardChanged += Bingo_BoardChanged;
         }
 
         private void Bingo_BoardChanged(string data)
         {
             // Save the current board in case of a crash
             SettingsManager.SetSavedLlamaBingo(data);
-
-            // Check the board for bingos
-            ConfettiEnabled = Bingo.HasBingo(out _);
-
-           
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Llamingo: Board changed",
+                new Dictionary<string, string> {
+                    { "BoardData", data },
+                }
+            );
         }
 
         private async void SaveImage_Click(object sender, RoutedEventArgs e)
@@ -124,7 +124,11 @@ namespace UWPCommunity.Views.Subviews
             request.Data.Properties.ContentSourceApplicationLink = boardLink;
             //request.Data.Properties.Thumbnail = boardLink;
 
-           
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Llamingo: Board shared",
+                new Dictionary<string, string> {
+                    { "BoardData", boardUrl },
+                }
+            );
         }
 
         public static async Task<WriteableBitmap> RenderUIElement(UIElement element)
@@ -157,14 +161,14 @@ namespace UWPCommunity.Views.Subviews
                 Bingo.SetByDataString(e.Parameter.ToString());
             }
 
-            CompactOverlayButton.IsChecked = 
-                ApplicationView.GetForCurrentView().ViewMode == ApplicationViewMode.CompactOverlay;
+            CompactOverlayButton.IsChecked = ApplicationView.GetForCurrentView().ViewMode == ApplicationViewMode.CompactOverlay;
         }
 
         private void ResetBoardButton_Click(object sender, RoutedEventArgs e)
         {
             Bingo.ResetBoard();
-            RecentBoards.Insert(0, Bingo.ToDataString());           
+            RecentBoards.Insert(0, Bingo.ToDataString());
+            Microsoft.AppCenter.Analytics.Analytics.TrackEvent("Llamingo: Board reset");
         }
 
         private async void LoadLink_Click(object sender, RoutedEventArgs e)
@@ -173,13 +177,11 @@ namespace UWPCommunity.Views.Subviews
             if (clipboardPackage.Contains(StandardDataFormats.Text))
             {
                 string link = await clipboardPackage.GetTextAsync();
-
-                //TODO
-                //var queries = HttpUtility.ParseQueryString(link);
-                if (true)//(queries?["board"] != null)
+                var queries = HttpUtility.ParseQueryString(link);
+                if (queries?["board"] != null)
                 {
-                    //Bingo.SetByDataString(queries["board"]);
-                    //RecentBoards.Insert(0, queries["board"]);
+                    Bingo.SetByDataString(queries["board"]);
+                    RecentBoards.Insert(0, queries["board"]);
                     return;
                 }
             }

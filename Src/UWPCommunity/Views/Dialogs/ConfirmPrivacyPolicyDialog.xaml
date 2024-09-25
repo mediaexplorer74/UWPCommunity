@@ -6,11 +6,10 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d"
-    PrimaryButtonText="I Agree"
+    PrimaryButtonText="I agree"
     SecondaryButtonText="Cancel"
     PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
-    SecondaryButtonClick="ContentDialog_SecondaryButtonClick"
-    Style="{ThemeResource DefaultContentDialogStyle}">
+    SecondaryButtonClick="ContentDialog_SecondaryButtonClick">
 
     <ContentDialog.Title>
         <TextBlock Text="Please confirm" Foreground="{StaticResource SystemAccentColor}" />
@@ -19,9 +18,8 @@
     <TextBlock TextWrapping="WrapWholeWords">
         <Span>
             <Run>By logging in, you confirm that you have read and agree to our </Run>
-            <Hyperlink Click="PrivacyPolicyLink_Click">Privacy Policy</Hyperlink>
-            <Run> and that you are at least 13 years of age.</Run>
-        </Span>
+            <Hyperlink NavigateUri="https://uwpcommunity.com/privacy-policy">Privacy Policy</Hyperlink>
+            <Run> and that you are at least 13 years of age.</Run></Span>
     </TextBlock>
     
 </ContentDialog>

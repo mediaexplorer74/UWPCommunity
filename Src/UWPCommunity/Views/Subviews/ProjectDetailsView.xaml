@@ -8,60 +8,62 @@
     xmlns:toolkit="using:Microsoft.Toolkit.Uwp.UI.Controls"
     xmlns:converters="using:UWPCommunity.Converters"
     xmlns:Windows10version1809="http://schemas.microsoft.com/winfx/2006/xaml/presentation?IsApiContractPresent(Windows.Foundation.UniversalApiContract, 7)"
-    xmlns:fluent="using:Fluent.Icons"
     mc:Ignorable="d">
 
     <Page.Resources>
         <converters:NullVisibilityConverter x:Key="NullToVisibilityConverter"/>
-        <Style TargetType="Button" BasedOn="{StaticResource ButtonRevealStyle}"/>
     </Page.Resources>
 
     <Grid>
-        <Grid Padding="8">
-            <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-            </Grid.RowDefinitions>
-            
-            <StackPanel toolkit:DockPanel.Dock="Top" Orientation="Vertical" Spacing="4">
-                <StackPanel Orientation="Horizontal" Spacing="4">
+        <ContentControl HorizontalContentAlignment="Stretch" Margin="10">
+            <toolkit:DockPanel LastChildFill="True" VerticalAlignment="Stretch">
+                <RelativePanel toolkit:DockPanel.Dock="Top">
                     <TextBlock Style="{StaticResource TitleTextBlockStyle}" Text="{x:Bind Project.AppName}"
                                FontWeight="SemiBold" x:Name="TitleBlock"/>
-                    <Button Visibility="{x:Bind Project.DownloadLink, Mode=TwoWay, Converter={StaticResource NullToVisibilityConverter}}"
-                            Click="DownloadLinkButton_Click" Windows10version1809:CornerRadius="0"
-                            ToolTipService.ToolTip="Download" AutomationProperties.Name="Download"
-                            VerticalAlignment="Stretch">
-                        <fluent:FluentIconElement Symbol="ArrowDownload24" Margin="-4,0,0,0"/>
-                    </Button>
-                    <Button Visibility="{x:Bind Project.ExternalLink, Mode=TwoWay, Converter={StaticResource NullToVisibilityConverter}}"
-                            Click="ExternalLinkButton_Click" Windows10version1809:CornerRadius="0"
-                            ToolTipService.ToolTip="Open website" AutomationProperties.Name="Open website"
-                            VerticalAlignment="Stretch">
-                        <fluent:FluentIconElement Symbol="Globe24" Margin="-1,0,0,0"/>
-                    </Button>
-                    <Button Visibility="{x:Bind Project.GitHubLink, Mode=TwoWay, Converter={StaticResource NullToVisibilityConverter}}"
-                            Click="GitHubLinkButton_Click" Windows10version1809:CornerRadius="0"
-                            ToolTipService.ToolTip="Open GitHub repo" AutomationProperties.Name="Open GitHub repo"
-                            VerticalAlignment="Stretch">
-                        <fluent:FluentIconElement Symbol="Code24" Margin="-1,0,0,0" />
-                    </Button>
-                </StackPanel>
-                <TextBlock RelativePanel.Below="TitleBlock" Text="{x:Bind Project.Description}"
-                           Style="{StaticResource BodyTextBlockStyle}" TextWrapping="WrapWholeWords"
-                           x:Name="DescriptionBlock"/>
-                <TextBlock RelativePanel.Below="DescriptionBlock" Style="{StaticResource BodyTextBlockStyle}"
-                           TextWrapping="WrapWholeWords" x:Name="CollaboratorsBlock"
-                           Text="Developed by: "/>
-            </StackPanel>
+                    <TextBlock RelativePanel.Below="TitleBlock" Text="{x:Bind Project.Description}"
+                               Style="{StaticResource BodyTextBlockStyle}" TextWrapping="WrapWholeWords"
+                               x:Name="DescriptionBlock"/>
+                    <TextBlock RelativePanel.Below="DescriptionBlock" Style="{StaticResource BodyTextBlockStyle}"
+                               TextWrapping="WrapWholeWords" Margin="0,5,0,0" x:Name="CollaboratorsBlock"
+                               Text="Developed by: "/>
 
-            <Image x:Name="HeroImageCtl" Source="{x:Bind Project.HeroImageSafe}" Stretch="Uniform"
-                   HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,8,0,0" Grid.Row="1"/>
-        </Grid>
+                    <ContentPresenter RelativePanel.RightOf="TitleBlock"
+                              HorizontalAlignment="Right" VerticalAlignment="Stretch"
+                              FlowDirection="RightToLeft">
+                        <StackPanel Orientation="Horizontal">
+                            <Button Visibility="{x:Bind Project.ExternalLink, Mode=TwoWay, Converter={StaticResource NullToVisibilityConverter}}"
+                                            Click="ExternalLinkButton_Click" Margin="0,0,5,0">
+                                <Button.Content>
+                                    <SymbolIcon Symbol="Globe"/>
+                                </Button.Content>
+                            </Button>
+                            <Button Visibility="{x:Bind Project.GitHubLink, Mode=TwoWay, Converter={StaticResource NullToVisibilityConverter}}"
+                                            Click="GitHubLinkButton_Click" Margin="0,0,5,0">
+                                <Button.Content>
+                                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xEF90;" />
+                                </Button.Content>
+                            </Button>
+                            <Button Visibility="{x:Bind Project.DownloadLink, Mode=TwoWay, Converter={StaticResource NullToVisibilityConverter}}"
+                                            Click="DownloadLinkButton_Click" Margin="0,0,5,0">
+                                <Button.Content>
+                                    <SymbolIcon Symbol="Shop"/>
+                                </Button.Content>
+                            </Button>
+                        </StackPanel>
+                    </ContentPresenter>
+                </RelativePanel>
+
+                <Image x:Name="HeroImageCtl" Source="{x:Bind Project.HeroImageSafe}" Stretch="Uniform"
+                       HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Margin="0,10,0,0"/>
+            </toolkit:DockPanel>
+        </ContentControl>
 
         <Button x:Name="CloseButton" VerticalAlignment="Top" HorizontalAlignment="Right"
-                Click="CloseButton_Click" Width="44" Height="40" Windows10version1809:CornerRadius="0"
-                ToolTipService.ToolTip="Close" AutomationProperties.Name="Go back">
-            <fluent:FluentIconElement Symbol="Dismiss24" Margin="-2,-2,0,0"/>
+                Click="CloseButton_Click" Windows10version1809:CornerRadius="0"
+                Width="48" Height="40" Style="{ThemeResource ButtonRevealStyle}">
+            <Button.Content>
+                <SymbolIcon Symbol="Clear"/>
+            </Button.Content>
         </Button>
     </Grid>
 </Page>

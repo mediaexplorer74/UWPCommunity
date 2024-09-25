@@ -1,7 +1,7 @@
 ﻿using Microsoft.Toolkit.Uwp.Notifications;
 using System;
 using System.Threading.Tasks;
-using UwpCommunityBackend.Models;
+using UWPCommLib.Api.UWPComm.Models;
 using Windows.Foundation;
 using Windows.Storage;
 using Windows.UI.Notifications;
@@ -71,19 +71,20 @@ namespace UWPCommunity
 
         public static ElementTheme GetAppTheme()
         {
-            return ThemeFromName(GetAppThemeName());
+            return ThemeFromName(localSettings.Values["AppTheme"] as string);
         }
         public static string GetAppThemeName()
         {
-            if (localSettings.Values.TryGetValue("AppTheme", out object value))
-            {
-                return value.ToString();
-            }
-            else
+            var theme = localSettings.Values["AppTheme"] as string;
+            if (String.IsNullOrEmpty(theme))
             {
                 var defaultTheme = "Default";
                 SetAppTheme(defaultTheme);
                 return defaultTheme;
+            }
+            else
+            {
+                return theme;
             }
         }
         public static void SetAppTheme(ElementTheme theme)
@@ -99,7 +100,17 @@ namespace UWPCommunity
         }
         private static ElementTheme ThemeFromName(string themeName)
         {
-            return (ElementTheme)Enum.Parse(typeof(ElementTheme), themeName, true);
+            switch (themeName)
+            {
+                case "Light":
+                    return ElementTheme.Light;
+
+                case "Dark":
+                    return ElementTheme.Dark;
+
+                default:
+                    return ElementTheme.Default;
+            }
         }
         public static void ApplyAppTheme(ElementTheme theme)
         {
@@ -116,44 +127,40 @@ namespace UWPCommunity
         public const string PROD_API_URL = "https://uwpcommunity-site-backend.herokuapp.com";
         public static bool GetUseDebugApi()
         {
-            if (localSettings.Values.TryGetValue("UseDebugApi", out object value))
+            try
             {
-                // Older versions stored this a string
-                if (value is bool boolVal)
-                    return boolVal;
-                else
-                    return bool.Parse(value.ToString());
+                return Boolean.Parse(localSettings.Values["UseDebugApi"] as string);
             }
-            else
+            catch
             {
-                SetUseDebugApi(true);
-                return true;
+                SetUseDebugApi(false);
+                return false;
             }
         }
         public static void SetUseDebugApi(bool value)
         {
-            localSettings.Values["UseDebugApi"] = value;
+            localSettings.Values["UseDebugApi"] = value.ToString();
             ApplyUseDebugApi(value);
             UseDebugApiChanged?.Invoke(value);
             SettingsChanged?.Invoke("UseDebugApi", value);
         }
         public static void ApplyUseDebugApi(bool value)
         {
-            UwpCommunityBackend.Api.BaseUrl =
-                value ?
-                UwpCommunityBackend.Api.LOCAL_BASE_URL :
-                UwpCommunityBackend.Api.WEB_BASE_URL;
+            Common.UwpCommApiHostUrl = value ? DEBUG_API_URL : PROD_API_URL;
+            Common.UwpCommApi = Refit.RestService.For<UWPCommLib.Api.UWPComm.IUwpCommApi>(
+                Common.UwpCommApiHostUrl
+            );
         }
         public delegate void UseDebugApiChangedHandler(bool value);
         public static event UseDebugApiChangedHandler UseDebugApiChanged;
 
         public static Point GetProjectCardSize()
         {
-            if (localSettings.Values.TryGetValue("ProjectCardSize", out object value))
+            try
             {
-                return (Point)value;
+                return (Point)localSettings.Values["ProjectCardSize"];
             }
-            else
+            catch
             {
                 var defaultRect = new Point(300, 300);
                 SetProjectCardSize(defaultRect);
@@ -171,11 +178,11 @@ namespace UWPCommunity
 
         public static bool GetShowLlamaBingo()
         {
-            if (localSettings.Values.TryGetValue("ShowLlamaBingo", out object value))
+            try
             {
-                return (bool)value;
+                return (bool)localSettings.Values["ShowLlamaBingo"];
             }
-            else
+            catch
             {
                 SetShowLlamaBingo(true);
                 return true;
@@ -192,11 +199,11 @@ namespace UWPCommunity
 
         public static string GetSavedLlamaBingo()
         {
-            if (localSettings.Values.TryGetValue("SavedLlamaBingo", out object value))
+            try
             {
-                return value.ToString();
+                return (string)localSettings.Values["SavedLlamaBingo"];
             }
-            else
+            catch
             {
                 SetSavedLlamaBingo(null);
                 return null;
@@ -213,11 +220,11 @@ namespace UWPCommunity
 
         public static bool GetShowLiveTile()
         {
-            if (localSettings.Values.TryGetValue("ShowLiveTile", out object value))
+            try
             {
-                return (bool)value;
+                return (bool)localSettings.Values["ShowLiveTile"];
             }
-            else
+            catch
             {
                 SetShowLiveTile(true);
                 return true;
@@ -237,59 +244,55 @@ namespace UWPCommunity
             if (value)
             {
                 // Load all app messages
-                try
+                var messages = await Common.YoshiApi.GetAppMessages("UWPCommunity");
+                foreach (UWPCommLib.Api.Yoshi.Models.AppMessage message in messages)
                 {
-                    var messages = await YoshiServer.Api.GetAppMessages("UWPCommunity");
-                    foreach (YoshiServer.Models.AppMessage message in messages)
-                    {
-                        if (message.Importance > 1)
-                            continue;
+                    if (message.Importance > 1)
+                        continue;
 
-                        // Update live tile
-                        TileBindingContentAdaptive text = new TileBindingContentAdaptive
+                    // Update live tile
+                    TileBindingContentAdaptive text = new TileBindingContentAdaptive
+                    {
+                        Children =
                         {
-                            Children =
+                            new AdaptiveText()
                             {
-                                new AdaptiveText()
-                                {
-                                    Text = message.Title,
-                                    HintWrap = true,
-                                },
-                                new AdaptiveText()
-                                {
-                                    Text = message.Message,
-                                    HintStyle = AdaptiveTextStyle.CaptionSubtle,
-                                    HintWrap = true
-                                }
+                                Text = message.Title,
+                                HintWrap = true,
+                            },
+                            new AdaptiveText()
+                            {
+                                Text = message.Message,
+                                HintStyle = AdaptiveTextStyle.CaptionSubtle,
+                                HintWrap = true
                             }
-                        };
-                        var tileContent = new TileContent()
+                        }
+                    };
+                    var tileContent = new TileContent()
+                    {
+                        Visual = new TileVisual()
                         {
-                            Visual = new TileVisual()
+                            TileMedium = new TileBinding()
                             {
-                                TileMedium = new TileBinding()
-                                {
-                                    Branding = TileBranding.Logo,
-                                    Content = text
-                                },
-                                TileWide = new TileBinding()
-                                {
-                                    Branding = TileBranding.NameAndLogo,
-                                    Content = text
-                                },
-                                TileLarge = new TileBinding()
-                                {
-                                    Branding = TileBranding.NameAndLogo,
-                                    Content = text
-                                }
+                                Branding = TileBranding.Logo,
+                                Content = text
+                            },
+                            TileWide = new TileBinding()
+                            {
+                                Branding = TileBranding.NameAndLogo,
+                                Content = text
+                            },
+                            TileLarge = new TileBinding()
+                            {
+                                Branding = TileBranding.NameAndLogo,
+                                Content = text
                             }
-                        };
-                        var notification = new TileNotification(tileContent.GetXml());
-                        TileUpdateManager.CreateTileUpdaterForApplication().EnableNotificationQueue(true);
-                        TileUpdateManager.CreateTileUpdaterForApplication().Update(notification);
-                    }
+                        }
+                    };
+                    var notification = new TileNotification(tileContent.GetXml());
+                    TileUpdateManager.CreateTileUpdaterForApplication().EnableNotificationQueue(true);
+                    TileUpdateManager.CreateTileUpdaterForApplication().Update(notification);
                 }
-                catch { }
             }
         }
         public delegate void ShowLiveTileChangedHandler(bool value);
@@ -297,11 +300,11 @@ namespace UWPCommunity
 
         public static bool GetExtendIntoTitleBar()
         {
-            if (localSettings.Values.TryGetValue("ExtendIntoTitleBar", out object value))
+            try
             {
-                return (bool)value;
+                return (bool)localSettings.Values["ExtendIntoTitleBar"];
             }
-            else
+            catch
             {
                 SetExtendIntoTitleBar(true);
                 return true;
@@ -315,27 +318,6 @@ namespace UWPCommunity
         }
         public delegate void ExtendIntoTitleBarChangedHandler(bool value);
         public static event ExtendIntoTitleBarChangedHandler ExtendIntoTitleBarChanged;
-
-        public static bool GetUseBlurEffects()
-        {
-            if (localSettings.Values.TryGetValue("UseBlurEffects", out object value))
-            {
-                return (bool)value;
-            }
-            else
-            {
-                SetExtendIntoTitleBar(true);
-                return true;
-            }
-        }
-        public static void SetUseBlurEffects(bool value)
-        {
-            localSettings.Values["UseBlurEffects"] = value;
-            UseBlurEffectsChanged?.Invoke(value);
-            SettingsChanged?.Invoke("UseBlurEffects", value);
-        }
-        public delegate void UseBlurEffectsChangedHandler(bool value);
-        public static event UseBlurEffectsChangedHandler UseBlurEffectsChanged;
 
         public delegate void SettingsChangedHandler(string name, object value);
         public static event SettingsChangedHandler SettingsChanged;
@@ -354,11 +336,11 @@ namespace UWPCommunity
 
             public static bool GetShowAppMessages()
             {
-                if (localSettings.Values.TryGetValue("ShowAppMessages", out object value))
+                try
                 {
-                    return (bool)value;
+                    return (bool)localSettings.Values["ShowAppMessages"];
                 }
-                else
+                catch
                 {
                     SetShowAppMessages(true);
                     return true;
@@ -375,11 +357,11 @@ namespace UWPCommunity
 
             public static string GetLastAppMessageId()
             {
-                if (localSettings.Values.TryGetValue("LastAppMessageId", out object value))
+                try
                 {
-                    return value.ToString();
+                    return (string)localSettings.Values["LastAppMessageId"];
                 }
-                else
+                catch
                 {
                     SetLastAppMessageId(null);
                     return null;
@@ -396,11 +378,11 @@ namespace UWPCommunity
 
             public static int GetImportanceLevel()
             {
-                if (localSettings.Values.TryGetValue("ImportanceLevel", out object value))
+                try
                 {
-                    return (int)value;
+                    return (int)localSettings.Values["ImportanceLevel"];
                 }
-                else
+                catch
                 {
                     SetImportanceLevel(3);
                     return 3;

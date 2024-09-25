@@ -6,67 +6,42 @@
     xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:controls="using:UWPCommunity.Controls"
-    xmlns:canvas="using:Microsoft.Graphics.Canvas.UI.Xaml"
-    xmlns:fluent="using:Fluent.Icons"
     mc:Ignorable="d"
     NavigationCacheMode="Required">
 
     <Grid>
-        <Grid.RowDefinitions>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
-        
         <Viewbox>
             <controls:BingoCard x:Name="Bingo" Width="550" Height="550"/>
         </Viewbox>
+    </Grid>
 
-        <canvas:CanvasAnimatedControl x:Name="BingoCanvas" CreateResources="BingoCanvas_CreateResources"
-                                      Update="BingoCanvas_Update" Draw="BingoCanvas_Draw"
-                                      ClearColor="Transparent" IsHitTestVisible="False"/>
-
-        <CommandBar Grid.Row="1" DefaultLabelPosition="Right">
-            <AppBarButton Label="Reset" Click="ResetBoardButton_Click">
-                <AppBarButton.Icon>
-                    <fluent:FluentIconElement Symbol="Dismiss24"/>
-                </AppBarButton.Icon>
-            </AppBarButton>
-            <AppBarButton Label="Share" Click="CopyLink_Click">
-                <AppBarButton.Icon>
-                    <fluent:FluentIconElement Symbol="Share24"/>
-                </AppBarButton.Icon>
-            </AppBarButton>
-            <AppBarButton Label="Load from Clipboard" Click="LoadLink_Click">
-                <AppBarButton.Icon>
-                    <fluent:FluentIconElement Symbol="ClipboardLink24"/>
-                </AppBarButton.Icon>
-            </AppBarButton>
+    <Page.BottomAppBar>
+        <CommandBar>
+            <AppBarButton Icon="Refresh" Label="Reset" Click="ResetBoardButton_Click"/>
+            <AppBarButton Icon="Share" Label="Share" Click="CopyLink_Click"/>
+            <AppBarButton Icon="Paste" Label="Load from Clipboard" Click="LoadLink_Click"/>
             <AppBarToggleButton x:Name="CompactOverlayButton" Label="Compact Overlay"
                                 Checked="CompactOverlayButton_Checked" Unchecked="CompactOverlayButton_Unchecked">
                 <AppBarToggleButton.Icon>
-                    <fluent:FluentIconElement Symbol="Open24"/>
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8A7;"/>
                 </AppBarToggleButton.Icon>
             </AppBarToggleButton>
 
             <CommandBar.SecondaryCommands>
-                <AppBarButton Label="Save As Image" Click="SaveImage_Click">
-                    <AppBarButton.Icon>
-                        <fluent:FluentIconElement Symbol="Save24"/>
-                    </AppBarButton.Icon>
-                </AppBarButton>
+                <AppBarButton Icon="Save" Label="Save As Image" Click="SaveImage_Click"/>
                 <AppBarButton x:Name="HistoryButton" Label="History">
                     <AppBarButton.Icon>
-                        <fluent:FluentIconElement Symbol="History24"/>
+                        <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE81C;" />
                     </AppBarButton.Icon>
                     <AppBarButton.Flyout>
                         <Flyout>
-                            <ListView ItemsSource="{x:Bind RecentBoards, Mode=OneWay}" IsItemClickEnabled="True"
+                            <ListView ItemsSource="{Binding RecentBoards}" IsItemClickEnabled="True"
                                       ItemClick="RecentBoardsList_ItemClick" SelectionMode="None"/>
                         </Flyout>
                     </AppBarButton.Flyout>
                 </AppBarButton>
             </CommandBar.SecondaryCommands>
         </CommandBar>
-    </Grid>
+    </Page.BottomAppBar>
     
 </Page>

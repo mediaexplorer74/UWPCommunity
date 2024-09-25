@@ -10,8 +10,7 @@
     PrimaryButtonText="OK"
     SecondaryButtonText="Cancel"
     PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
-    SecondaryButtonClick="ContentDialog_SecondaryButtonClick"
-    Style="{ThemeResource DefaultContentDialogStyle}">
+    SecondaryButtonClick="ContentDialog_SecondaryButtonClick">
 
     <ContentDialog.Title>
         <StackPanel>

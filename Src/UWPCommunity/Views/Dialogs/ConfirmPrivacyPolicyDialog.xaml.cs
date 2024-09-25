@@ -22,10 +22,5 @@ namespace UWPCommunity.Views.Dialogs
             // Do nothing. The RequestSignIn method stops sign-in if the user
             // does not click the primary button.
         }
-
-        private async void PrivacyPolicyLink_Click(Windows.UI.Xaml.Documents.Hyperlink sender, Windows.UI.Xaml.Documents.HyperlinkClickEventArgs args)
-        {
-            await NavigationManager.OpenInBrowser("https://uwpcommunity.com/privacy-policy");
-        }
     }
 }

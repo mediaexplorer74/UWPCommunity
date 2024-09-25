@@ -7,9 +7,9 @@ using Windows.UI.ViewManagement;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Navigation;
-//using Microsoft.AppCenter;
-//using Microsoft.AppCenter.Analytics;
-//using Microsoft.AppCenter.Crashes;
+using Microsoft.AppCenter;
+using Microsoft.AppCenter.Analytics;
+using Microsoft.AppCenter.Crashes;
 using System.Net.Http;
 using Windows.UI.StartScreen;
 
@@ -28,11 +28,10 @@ namespace UWPCommunity
         {
             this.InitializeComponent();
             this.Suspending += OnSuspending;
-            //AppCenter.LogLevel = LogLevel.Verbose;
-#if !DEBUG
-           // AppCenter.Start("fbea1ef8-e96d-4848-baf2-fa79983b30f4",
-           //        typeof(Analytics), typeof(Crashes));
-#endif
+            this.UnhandledException += App_UnhandledException;
+            AppCenter.LogLevel = LogLevel.Verbose;
+            AppCenter.Start("fbea1ef8-e96d-4848-baf2-fa79983b30f4",
+                   typeof(Analytics), typeof(Crashes));
         }
 
         /// <summary>
@@ -70,19 +69,12 @@ namespace UWPCommunity
                     // When the navigation stack isn't restored navigate to the first page,
                     // configuring the new page by passing required information as a navigation
                     // parameter
-                    if (!Common.IsInternetAvailable())
-                    {
-                        rootFrame.Navigate(typeof(Views.Subviews.NoInternetPage));
-                    }
-                    else
-                    {
-                        rootFrame.Navigate(typeof(MainPage), NavigationManager.ParseProtocol(e.Arguments));
-                    }
+                    rootFrame.Navigate(typeof(MainPage), e.Arguments);
                 }
                 // Ensure the current window is active
                 Window.Current.Activate();
             }
-            
+            rootFrame.Navigate(typeof(MainPage), NavigationManager.ParseProtocol(e.Arguments));
             SettingsManager.LoadDefaults(false);
             SettingsManager.ApplyAppTheme(SettingsManager.GetAppTheme());
             SettingsManager.ApplyUseDebugApi(SettingsManager.GetUseDebugApi());
@@ -91,6 +83,7 @@ namespace UWPCommunity
 
         protected override void OnActivated(IActivatedEventArgs args)
         {
+            this.UnhandledException += App_UnhandledException;
             Frame rootFrame = Window.Current.Content as Frame;
             ExtendIntoTitleBar();
 
@@ -118,7 +111,7 @@ namespace UWPCommunity
                 // TODO: Handle URI activation
                 // The received URI is eventArgs.Uri.AbsoluteUri
 
-                destination = NavigationManager.ParseProtocol(new Flurl.Url(eventArgs.Uri));
+                destination = NavigationManager.ParseProtocol(eventArgs.Uri);
             }
             rootFrame.Navigate(typeof(MainPage), destination);
 
@@ -153,6 +146,24 @@ namespace UWPCommunity
             deferral.Complete();
         }
 
+        private void App_UnhandledException(object sender, Windows.UI.Xaml.UnhandledExceptionEventArgs e)
+        {
+            Type exType = e.Exception.GetType();
+            e.Handled = true;
+            Frame rootFrame = new Frame();
+            Window.Current.Content = rootFrame;
+
+            this.UnhandledException -= App_UnhandledException;
+
+            if (exType == typeof(HttpRequestException))
+            {
+                rootFrame.Navigate(typeof(Views.Subviews.NoInternetPage), e);
+                return;
+            }
+
+            rootFrame.Navigate(typeof(Views.UnhandledExceptionPage), e);
+        }
+
         private async System.Threading.Tasks.Task SetJumplist()
         {
             if (JumpList.IsSupported())
@@ -181,13 +192,17 @@ namespace UWPCommunity
 
                 ApplicationView.GetForCurrentView().TitleBar.ButtonForegroundColor = (Color)Current.Resources["SystemAccentColor"];
                 ApplicationView.GetForCurrentView().TitleBar.ButtonBackgroundColor = Colors.Transparent;
+                ApplicationView.GetForCurrentView().TitleBar.ButtonHoverForegroundColor = (Color)Current.Resources["SystemAccentColor"];
+                ApplicationView.GetForCurrentView().TitleBar.ButtonHoverBackgroundColor = Colors.Transparent;
             }
             else
             {
                 coreTitleBar.ExtendViewIntoTitleBar = false;
 
                 ApplicationView.GetForCurrentView().TitleBar.ButtonForegroundColor = null;
-                ApplicationView.GetForCurrentView().TitleBar.ButtonBackgroundColor = null; 
+                ApplicationView.GetForCurrentView().TitleBar.ButtonBackgroundColor = null;
+                ApplicationView.GetForCurrentView().TitleBar.ButtonHoverForegroundColor = null;
+                ApplicationView.GetForCurrentView().TitleBar.ButtonHoverBackgroundColor = null;
             }
         }
 

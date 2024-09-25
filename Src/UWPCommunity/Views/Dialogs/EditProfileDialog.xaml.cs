@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using UwpCommunityBackend;
 using Windows.UI.Xaml.Controls;
 
 // The Content Dialog item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
@@ -18,7 +17,7 @@ namespace UWPCommunity.Views.Dialogs
 
         private async void EditProfileDialog_Loaded(object sender, Windows.UI.Xaml.RoutedEventArgs e)
         {
-            var user = await UserManager.GetCurrentUser();
+            var user = await Common.GetCurrentUser();
             LoadingBar.Visibility = Windows.UI.Xaml.Visibility.Collapsed;
 
             NameBox.Text = user.Name;
@@ -35,7 +34,7 @@ namespace UWPCommunity.Views.Dialogs
             {
                 changes.Add("email", EmailBox.Text);
             }
-            await Api.SetUser(changes);
+            await Common.UwpCommApi.SetUser(changes);
         }
 
         private void ContentDialog_SecondaryButtonClick(ContentDialog sender, ContentDialogButtonClickEventArgs args)
