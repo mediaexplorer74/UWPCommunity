@@ -1,16 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Numerics;
-using Github;
-using GitHub.Models;
 using Windows.Foundation;
-using Windows.UI.Composition;
 using Windows.UI.Notifications;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Input;
 using Windows.UI.Xaml.Navigation;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
@@ -32,17 +25,10 @@ namespace UWPCommunity.Views
             SettingsPivot.Items.Remove(DebugTab);
             #endif
 
-            SettingsManager.SettingsChanged += SettingsManager_SettingsChanged;
             SettingsManager.AppThemeChanged += SettingsManager_AppThemeChanged;
             SettingsManager.ProjectCardSizeChanged += SettingsManager_ProjectCardSizeChanged;
             SettingsManager.ShowLlamaBingoChanged += SettingsManager_ShowLlamaBingoChanged;
             SettingsManager.UseDebugApiChanged += SettingsManager_UseDebugApiChanged;
-            SettingsManager.UseBlurEffectsChanged += SettingsManager_UseBlurEffectsChanged; ;
-        }
-
-        private void SettingsManager_SettingsChanged(string name, object value)
-        {
-           //
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -57,7 +43,6 @@ namespace UWPCommunity.Views
             ShowLlamaBingoBox.IsChecked = SettingsManager.GetShowLlamaBingo();
             ExtendIntoTitleBarBox.IsChecked = SettingsManager.GetExtendIntoTitleBar();
             ShowLiveTileBox.IsChecked = SettingsManager.GetShowLiveTile();
-            UseBlurEffectsBox.IsChecked = SettingsManager.GetUseBlurEffects();
             ShowAppMessagesBox.IsChecked = SettingsManager.AppMessageSettings.GetShowAppMessages();
             ImportanceLevelSlider.Value = SettingsManager.AppMessageSettings.GetImportanceLevel();
             AppVersionRun.Text = App.GetVersion();
@@ -65,7 +50,6 @@ namespace UWPCommunity.Views
 
             if (e.Parameter is SettingsPages)
                 SettingsPivot.SelectedIndex = (int)e.Parameter;
-          
         }
 
         private void ShowRestartRequiredDialog()
@@ -78,12 +62,6 @@ namespace UWPCommunity.Views
                 PrimaryButtonText = "OK"
             };
             dialog.ShowAsync();
-        }
-
-        #region Settings Manager
-        private void SettingsManager_UseBlurEffectsChanged(bool value)
-        {
-            UseBlurEffectsBox.IsChecked = value;
         }
 
         private void SettingsManager_UseDebugApiChanged(bool value)
@@ -122,16 +100,6 @@ namespace UWPCommunity.Views
             SettingsManager.SetProjectCardSize(new Point(ProjectCardWidth.Value, ProjectCardHeight.Value));
         }
 
-        private void UseBlurEffectsBox_Checked(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SetUseBlurEffects(true);
-        }
-
-        private void UseBlurEffectsBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.SetUseBlurEffects(false);
-        }
-
         private void ShowLlamaBingoBox_Checked(object sender, RoutedEventArgs e)
         {
             SettingsManager.SetShowLlamaBingo(true);
@@ -166,24 +134,6 @@ namespace UWPCommunity.Views
             TileUpdateManager.CreateTileUpdaterForApplication().Clear();
             SettingsManager.SetShowLiveTile(false);
         }
-
-        private void ShowAppMessagesBox_Checked(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.AppMessageSettings.SetShowAppMessages(true);
-        }
-
-        private void ShowAppMessagesBox_Unchecked(object sender, RoutedEventArgs e)
-        {
-            SettingsManager.AppMessageSettings.SetShowAppMessages(false);
-        }
-
-        private void ImportanceLevelSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
-        {
-            if (isReady)
-                SettingsManager.AppMessageSettings.SetImportanceLevel((int)e.NewValue);
-        }
-
-        #endregion
 
         private async void DefaultButton_Click(object sender, RoutedEventArgs e)
         {
@@ -241,76 +191,20 @@ namespace UWPCommunity.Views
             }
         }
 
-        #region Contributor Panel
-        ObservableCollection<GitHubUser> Contributors { get; set; } = new ObservableCollection<GitHubUser>();
-        Compositor _compositor = Window.Current.Compositor;
-        SpringVector3NaturalMotionAnimation _springAnimation;
-
-        private async void ContributorView_Loaded(object sender, RoutedEventArgs e)
+        private void ShowAppMessagesBox_Checked(object sender, RoutedEventArgs e)
         {
-            var contribs = await Api.GetContributors("UWPCommunity", "UWPCommunityApp");
-            Contributors.Clear();
-            foreach (Contributor c in contribs)
-            {
-                Contributors.Add(await Api.GetUser(c.Login));
-            }
-
-            // TODO: How is this supposed to be done when items are databound?
-
-            // Animate the translation of each button relative to the scale and translation of the button above.
-            //var anim = _compositor.CreateExpressionAnimation();
-            //anim.Expression = "(above.Scale.Y - 1) * 50 + above.Translation.Y % (50 * index)";
-            //anim.Target = "Translation.Y";
-
-            //var panel = sender as StackPanel;
-            //for (int i = 1; i < panel.Children.Count; i++)
-            //{
-            //    var current = panel.Children[i];
-            //    var before = panel.Children[i - 1];
-
-            //    // Animate the second button relative to the first.
-            //    anim.SetExpressionReferenceParameter("above", before);
-            //    anim.SetScalarParameter("index", i);
-            //    current.StartAnimation(anim);
-            //}
+            SettingsManager.AppMessageSettings.SetShowAppMessages(true);
         }
 
-        private void CreateOrUpdateSpringAnimation(float finalValue)
+        private void ShowAppMessagesBox_Unchecked(object sender, RoutedEventArgs e)
         {
-            if (_springAnimation == null)
-            {
-                _springAnimation = _compositor.CreateSpringVector3Animation();
-                _springAnimation.Target = "Scale";
-            }
-
-            _springAnimation.FinalValue = new Vector3(finalValue);
+            SettingsManager.AppMessageSettings.SetShowAppMessages(false);
         }
 
-        private void element_PointerEntered(object sender, PointerRoutedEventArgs e)
+        private void ImportanceLevelSlider_ValueChanged(object sender, RangeBaseValueChangedEventArgs e)
         {
-            return;
-            // Scale up to 1.25
-            CreateOrUpdateSpringAnimation(1.25f);
-
-            (sender as UIElement).StartAnimation(_springAnimation);
+            if (isReady)
+                SettingsManager.AppMessageSettings.SetImportanceLevel((int)e.NewValue);
         }
-
-        private void element_PointerExited(object sender, PointerRoutedEventArgs e)
-        {
-            return;
-            // Scale back down to 1.0
-            CreateOrUpdateSpringAnimation(1.0f);
-
-            (sender as UIElement).StartAnimation(_springAnimation);
-        }
-
-        private async void ContributorView_ItemClick(object sender, ItemClickEventArgs e)
-        {
-            if (e.ClickedItem is GitHubUser user)
-            {
-                await NavigationManager.OpenInBrowser(user.HtmlUrl);
-            }
-        }
-        #endregion
     }
 }

@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
-//using System.Web;
-using Windows.Foundation;
 using Windows.Storage;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -20,6 +17,8 @@ namespace UWPCommunity.Controls
     public sealed partial class BingoCard : UserControl
     {
         static readonly Version BingoVersion = new Version(App.GetVersion());
+        const string fname = @"Assets\LlamaBingo-Tiles.txt";
+        static readonly StorageFolder InstallationFolder = Windows.ApplicationModel.Package.Current.InstalledLocation;
         static List<string> AllTiles;
 
         public BingoCard()
@@ -30,8 +29,9 @@ namespace UWPCommunity.Controls
         public BingoCard(string dataString, string boardVersion)
         {
             this.InitializeComponent();
-            // Create a board from data string
-            
+            // TODO: Create a board from data string
+            ResetBoard();
+            SetByDataString(dataString);
         }
 
         /// <summary>
@@ -63,7 +63,7 @@ namespace UWPCommunity.Controls
                 // NEVER change the order of the lines in this file.
                 // GetBoardAsDataString() relies on the order being constant,
                 // so the line number can be used as a unique ID for each tile.
-                AllTiles = httpResponseBody.Split('\n', (char)StringSplitOptions.RemoveEmptyEntries).ToList();
+                AllTiles = httpResponseBody.Split(new string[] { "\n" }, StringSplitOptions.RemoveEmptyEntries).ToList();
             }
             catch (Exception ex)
             {
@@ -71,7 +71,7 @@ namespace UWPCommunity.Controls
             }
         }
 
-        public async Task ResetBoard()
+        public async void ResetBoard()
         {
             await InitBoard();
 
@@ -94,16 +94,15 @@ namespace UWPCommunity.Controls
                         continue;
 
                     int boardIndex = 5 * x + y;
-                    // Account for free space
                     if (boardIndex > 12)
                         boardIndex--;
-                    SetTile(newTiles.ElementAt(boardIndex), x, y, false, false);
+                    SetTile(newTiles.ElementAt(boardIndex), x, y);
                 }
             }
             BoardChanged?.Invoke(ToDataString());
         }
 
-        private void SetTile(string text, int x, int y, bool isFilled = false, bool fireBoardChanged = true)
+        private void SetTile(string text, int x, int y, bool isFilled = false)
         {
             if (x == 2 && y == 2)
             {
@@ -111,24 +110,21 @@ namespace UWPCommunity.Controls
                 return;
             }
 
-            var tileButton = CreateTile(text, isFilled);
+            var tileButton = new ToggleButton();
+            var tileText = new TextBlock();
+            tileText.Style = (Style)Resources["BingoBox"];
+            tileText.Text = text;
+            tileButton.Content = tileText;
+            tileButton.IsChecked = isFilled;
 
             int boardIndex = 5 * x + y;
             if (boardIndex >= BingoGrid.Children.Count)
                 BingoGrid.Children.Add(tileButton);
             else
                 BingoGrid.Children.Insert(5 * x + y, tileButton);
-
-            if (fireBoardChanged)
-                BoardChanged?.Invoke(ToDataString());
         }
 
         private void AddTile(string text, bool isFilled = false)
-        {
-            BingoGrid.Children.Add(CreateTile(text, isFilled));
-        }
-
-        private ToggleButton CreateTile(string text, bool isFilled)
         {
             var tileButton = new ToggleButton();
             var tileText = new TextBlock();
@@ -136,12 +132,10 @@ namespace UWPCommunity.Controls
             tileText.Text = text;
             tileButton.Content = tileText;
             tileButton.IsChecked = isFilled;
-            tileButton.Checked += InvokeBoardChanged;
-            tileButton.Unchecked += InvokeBoardChanged;
-            return tileButton;
+            BingoGrid.Children.Add(tileButton);
         }
 
-        private (string text, bool isFilled) GetTile(int x, int y)
+        private (string, bool) GetTile(int x, int y)
         {
             var tileButton = BingoGrid.Children[5 * x + y] as ToggleButton;
             if (tileButton == null)
@@ -152,10 +146,6 @@ namespace UWPCommunity.Controls
             var tileText = tileButton.Content as TextBlock;
             return (tileText.Text, tileButton.IsChecked.Value);
         }
-        private (string text, bool isFilled) GetTile(Point p)
-		{
-            return GetTile((int)p.X, (int)p.Y);
-		}
 
         private Grid GenerateFreeTile()
         {
@@ -244,18 +234,15 @@ namespace UWPCommunity.Controls
         /// <summary>
         /// Sets the current state of the board to the one specified by the data string
         /// </summary>
-        public async Task SetByDataString(string dataString, Version boardVersion = null)
+        public async void SetByDataString(string dataString, Version boardVersion = null)
         {
             // Check if the version is provided. If not, assume it is the current version.
             if (boardVersion == null)
                 boardVersion = BingoVersion;
 
-            await ResetBoard();
+            await InitBoard();
+            ResetBoard();
             BingoGrid.Children.Clear();
-
-            if (string.IsNullOrWhiteSpace(dataString))
-                // There is no data to load
-                return;
 
             // NOTE: When making significant changes to this algorithm,
             // don't delete the code. Create an if branch to run the
@@ -286,178 +273,10 @@ namespace UWPCommunity.Controls
 
         public string GetShareLink()
         {
-                                                  // &board={HttpUtility.UrlEncode(ToDataString())}
-            return $"uwpcommunity://llamabingo?version={BingoVersion}";
-        }
-
-        /// <summary>
-        /// Checks if the current board has any Llamingos
-        /// </summary>
-        /// <param name="tiles">A list of the tiles involved in completing the bingo</param>
-        public bool HasBingo(out List<Point> tiles)
-		{
-            int adjacentCount = 0;
-            tiles = new List<Point>();
-
-            // Check the edge tiles first. It's impossible to have
-            // a bingo without at least two edge tiles filled.
-
-            // Check top and bottom edges
-            for (int y = 0; y < 5; y++)
-            {
-                adjacentCount = 0;
-                bool isTopFilled = GetTile(0, y).isFilled;
-                bool isBottomFilled = GetTile(4, y).isFilled;
-
-                if (isTopFilled && isBottomFilled)
-                {
-                    tiles.Add(new Point(0, y));
-                    tiles.Add(new Point(4, y));
-
-                    // Check the tiles in-between the edges
-                    for (int x = 1; x < 4; x++)
-                    {
-                        if (GetTile(x, y).isFilled)
-                        {
-                            tiles.Add(new Point(x, y));
-                            adjacentCount++;
-                        }
-                    }
-
-                    // Look for three adjacent, since we already know that
-                    // two of the tiles (the ends) are filled
-                    if (adjacentCount >= 3)
-                        return true;
-                    else tiles.Clear();
-                }
-            }
-
-            // Check left and right edges
-            for (int x = 0; x < 5; x++)
-            {
-                adjacentCount = 0;
-                bool isLeftFilled = GetTile(x, 0).isFilled;
-                bool isRightFilled = GetTile(x, 4).isFilled;
-
-                if (isLeftFilled && isRightFilled)
-                {
-                    tiles.Add(new Point(x, 0));
-                    tiles.Add(new Point(x, 4));
-
-                    // Check the tiles in-between the edges
-                    for (int y = 1; y < 4; y++)
-                    {
-                        if (GetTile(x, y).isFilled)
-                        {
-                            tiles.Add(new Point(x, y));
-                            adjacentCount++;
-                        }
-                    }
-
-                    // Look for three adjacent, since we already know that
-                    // two of the tiles (the ends) are filled
-                    if (adjacentCount >= 3)
-                        return true;
-                    else tiles.Clear();
-                }
-            }
-
-            // Check top-left/bottom-right (descending) diagonal
-            bool isTopLeftFilled = GetTile(0, 0).isFilled;
-            bool isBottomRightFilled = GetTile(4, 4).isFilled;
-            if (isTopLeftFilled && isBottomRightFilled)
-            {
-                adjacentCount = 0;
-                int y;
-                for (int x = 1; x < 4; x++)
-                {
-                    y = x;
-                    if (GetTile(x, y).isFilled)
-                    {
-                        tiles.Add(new Point(x, y));
-                        adjacentCount++;
-                    }
-                }
-
-                // Look for three adjacent, since we already know that
-                // two of the tiles (the ends) are filled
-                if (adjacentCount >= 3)
-                    return true;
-                else tiles.Clear();
-            }
-
-            // Check top-right/bottom-left (ascending) diagonal
-            bool isTopRightFilled = GetTile(0, 4).isFilled;
-            bool isBottomLeftFilled = GetTile(4, 0).isFilled;
-            if (isTopRightFilled && isBottomLeftFilled)
-            {
-                adjacentCount = 0;
-                for (int x = 1; x < 4; x++)
-                {
-                    int y = 4 - x;
-                    if (GetTile(x, y).isFilled)
-                    {
-                        tiles.Add(new Point(x, y));
-                        adjacentCount++;
-                    }
-                }
-
-                // Look for three adjacent, since we already know that
-                // two of the tiles (the ends) are filled
-                if (adjacentCount >= 3)
-                    return true;
-                else tiles.Clear();
-            }
-
-            // If we've gone this far, then there can't be
-            // any bingos.
-            return false;
-        }
-
-        private readonly Dictionary<Point, Direction> DIRECTIONS = new Dictionary<Point, Direction>()
-        {
-            { new Point(0, 1), Direction.Up },
-            { new Point(1, 1), Direction.UpRight },
-            { new Point(1, 0), Direction.Right },
-            { new Point(1, -1), Direction.DownRight },
-            { new Point(0, -1), Direction.Down },
-            { new Point(-1, -1), Direction.DownLeft },
-            { new Point(-1, 0), Direction.Left },
-            { new Point(-1, 1), Direction.UpLeft },
-        };
-        /// <summary>
-        /// Returns all of the directions in which the given tile has
-        /// a filled tile.
-        /// </summary>
-        /// <param name="x"></param>
-        /// <param name="y"></param>
-        /// <returns></returns>
-        private IEnumerable<Direction> HasAdjacent(int x, int y)
-		{
-            foreach (KeyValuePair<Point, Direction> pair in DIRECTIONS)
-			{
-                Point d = pair.Key;
-                if (GetTile(x + (int)d.X, y + (int)d.Y).isFilled)
-                    yield return pair.Value;
-			}
-		}
-
-        [Flags]
-        public enum Direction : byte
-		{
-            Up          = 0b_1000,
-            UpRight     = Up | Right,
-            Right       = 0b_0001,
-            DownRight   = Down | Right,
-            Down        = 0b_0100,
-            DownLeft    = Down | Left,
-            Left        = 0b_0010,
-            UpLeft      = Up | Left,
+            return $"uwpcommunity://llamabingo?version={BingoVersion}&board={ToDataString()}";
         }
 
         public delegate void BoardChangedHandler(string data);
         public event BoardChangedHandler BoardChanged;
-
-        private void InvokeBoardChanged(object sender, RoutedEventArgs e) => BoardChanged?.Invoke(ToDataString());
     }
 }

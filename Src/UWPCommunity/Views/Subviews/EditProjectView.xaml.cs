@@ -1,10 +1,8 @@
-﻿using System.Collections.Generic;
-using Windows.UI.Xaml.Controls;
-using UwpCommunityBackend.Models;
+﻿using Windows.UI.Xaml.Controls;
+using UWPCommLib.Api.UWPComm.Models;
 using System;
 using System.Linq;
 using Windows.UI.Xaml.Navigation;
-using UwpCommunityBackend;
 
 // The Blank Page item template is documented at https://go.microsoft.com/fwlink/?LinkId=234238
 
@@ -39,16 +37,17 @@ namespace UWPCommunity.Views.Subviews
         {
             base.OnNavigatedTo(e);
 
-            if (e.Parameter is ViewModels.ProjectViewModel vm)
-			{
-                oldAppName = vm.Project.AppName;
-                Project = vm.Project;
-                IsEditing = true;
-            }
-            else
+            var project = e.Parameter as Project;
+            if (project == null)
             {
                 Project = new Project();
                 IsEditing = false;
+            }
+            else
+            {
+                oldAppName = project.AppName;
+                Project = project;
+                IsEditing = true;
             }
             Bindings.Update();
         }
@@ -59,34 +58,21 @@ namespace UWPCommunity.Views.Subviews
             {
                 if (IsEditing)
                 {
-                    await Api.PutProject(oldAppName, Project);
+                    await Common.UwpCommApi.PutProject(oldAppName, Project);
                 }
                 else
                 {
-                    await Api.PostProject(Project);
+                    await Common.UwpCommApi.PostProject(Project);
                 }
-               
                 NavigationManager.PageFrame.GoBack();
             }
-            catch (Flurl.Http.FlurlHttpException ex)
+            catch (Refit.ApiException ex)
             {
-                string reason = "An unknown error occurred";
-                var errorJson = await ex.GetResponseStringAsync();
-                if (!String.IsNullOrWhiteSpace(errorJson))
-                {
-                    // Wrap this in a try-catch block, because sometimes errorJson contains
-                    // HTML or other non-JSON content
-                    try
-                    {
-                        var error = Newtonsoft.Json.JsonConvert.DeserializeObject<Error>(errorJson);
-                        reason = error.Reason;
-                    }
-                    catch { }
-                }
+                var error = ex.GetContentAs<Error>();
                 ContentDialog dialog = new ContentDialog
                 {
                     Title = "Failed to create project",
-                    Content = reason,
+                    Content = error.Reason,
                     CloseButtonText = "Ok",
                     RequestedTheme = SettingsManager.GetAppTheme()
                 };
@@ -97,7 +83,6 @@ namespace UWPCommunity.Views.Subviews
         private async void SaveDraftButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
         {
             await SettingsManager.SaveProjectDraft(Project, !IsEditing);
-           
         }
 
         private async void LoadDraftButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
@@ -120,12 +105,11 @@ namespace UWPCommunity.Views.Subviews
                 ContentDialogResult result = await dialog.ShowAsync();
                 return;
             }
-
         }
 
         private void CancelButton_Click(object sender, Windows.UI.Xaml.RoutedEventArgs e)
         {
-           //
+            NavigationManager.PageFrame.GoBack();
         }
     }
 }

@@ -1,8 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.ComponentModel;
+using System.IO;
 using System.Linq;
-using UwpCommunityBackend.Models;
+using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices.WindowsRuntime;
+using UWPCommLib.Api.UWPComm.Models;
+using Windows.Foundation;
+using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
+using Windows.UI.Xaml.Controls.Primitives;
+using Windows.UI.Xaml.Data;
+using Windows.UI.Xaml.Input;
+using Windows.UI.Xaml.Media;
 using Windows.UI.Xaml.Media.Animation;
 using Windows.UI.Xaml.Navigation;
 
@@ -25,12 +36,12 @@ namespace UWPCommunity.Views.Subviews
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            //ConnectedAnimation animation =
-            //    ConnectedAnimationService.GetForCurrentView().GetAnimation("projectView");
-            //if (animation != null)
-            //{
-            //    animation.TryStart(HeroImageCtl);
-            //}
+            ConnectedAnimation animation =
+                ConnectedAnimationService.GetForCurrentView().GetAnimation("projectView");
+            if (animation != null)
+            {
+                animation.TryStart(HeroImageCtl);
+            }
             PreviousPage = e.SourcePageType;
 
             var project = e.Parameter as Project;
@@ -41,7 +52,7 @@ namespace UWPCommunity.Views.Subviews
                 // Set up the CollaboratorsBlock, since it can't be done with
                 // just bindings
                 CollaboratorsBlock.Text += String.Join(", ",
-                    Project.Collaborators.Where(c => c.IsOwner == true).Select(c => c.Name));
+                    Project.Collaborators.Select(c => c.Name));
             }
 
             base.OnNavigatedTo(e);

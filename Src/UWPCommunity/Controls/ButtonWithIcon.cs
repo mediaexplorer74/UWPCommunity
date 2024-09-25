@@ -20,19 +20,26 @@ namespace UWPCommunity.Controls
             this.DefaultStyleKey = typeof(ButtonWithIcon);
         }
 
-        public double IconSpacing {
-            get { return (double)GetValue(IconSpacingProperty); }
+        public string IconSpacing {
+            get { return (string)GetValue(IconSpacingProperty); }
             set { SetValue(IconSpacingProperty, value); }
         }
         public static readonly DependencyProperty IconSpacingProperty =
-            DependencyProperty.Register(nameof(IconSpacing), typeof(double), typeof(ButtonWithIcon), new PropertyMetadata(4));
+            DependencyProperty.Register("IconSpacing", typeof(int), typeof(ButtonWithIcon), null);
 
-        public IconElement Icon {
-            get { return (IconElement)GetValue(IconProperty); }
-            set { SetValue(IconProperty, value); }
+        public string Glyph {
+            get { return (string)GetValue(GlyphProperty); }
+            set { SetValue(GlyphProperty, value); }
         }
-        public static readonly DependencyProperty IconProperty =
-            DependencyProperty.Register(nameof(Icon), typeof(IconElement), typeof(ButtonWithIcon), null);
+        public static readonly DependencyProperty GlyphProperty =
+            DependencyProperty.Register("Glyph", typeof(string), typeof(ButtonWithIcon), null);
+
+        public FontFamily GlyphFont {
+            get { return (FontFamily)GetValue(GlyphFontProperty); }
+            set { SetValue(GlyphFontProperty, value); }
+        }
+        public static readonly DependencyProperty GlyphFontProperty =
+            DependencyProperty.Register("GlyphFont", typeof(FontFamily), typeof(ButtonWithIcon), null);
 
     }
 }

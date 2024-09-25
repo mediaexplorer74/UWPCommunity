@@ -9,19 +9,17 @@
     PrimaryButtonText="I Agree"
     SecondaryButtonText="Cancel"
     PrimaryButtonClick="ContentDialog_PrimaryButtonClick"
-    SecondaryButtonClick="ContentDialog_SecondaryButtonClick"
-    Style="{ThemeResource DefaultContentDialogStyle}">
+    SecondaryButtonClick="ContentDialog_SecondaryButtonClick">
 
     <ContentDialog.Title>
-        <TextBlock Text="Please confirm" Foreground="{StaticResource SystemAccentColor}" />
+        <TextBlock Text="Please confirm" Foreground="{StaticResource SystemAccentColorBrush}" />
     </ContentDialog.Title>
 
     <TextBlock TextWrapping="WrapWholeWords">
         <Span>
             <Run>By logging in, you confirm that you have read and agree to our </Run>
-            <Hyperlink Click="PrivacyPolicyLink_Click">Privacy Policy</Hyperlink>
-            <Run> and that you are at least 13 years of age.</Run>
-        </Span>
+            <Hyperlink NavigateUri="https://uwpcommunity.com/privacy-policy">Privacy Policy</Hyperlink>
+            <Run> and that you are at least 13 years of age.</Run></Span>
     </TextBlock>
     
 </ContentDialog>

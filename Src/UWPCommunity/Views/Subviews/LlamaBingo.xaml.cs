@@ -5,8 +5,9 @@ using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-//using System.Web;
+using System.Web;
 using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Graphics.Display;
@@ -28,7 +29,7 @@ namespace UWPCommunity.Views.Subviews
     /// </summary>
     public sealed partial class LlamaBingo : Page
     {
-        public ObservableCollection<string> RecentBoards { get; set; } = new ObservableCollection<string>();
+        public static ObservableCollection<string> RecentBoards { get; set; } = new ObservableCollection<string>();
 
         public LlamaBingo()
         {
@@ -44,24 +45,19 @@ namespace UWPCommunity.Views.Subviews
                 CompactOverlayButton.Visibility = Visibility.Collapsed;
             }
 
+            Bingo.BoardChanged += Bingo_BoardChanged;
+
             var savedBoard = SettingsManager.GetSavedLlamaBingo();
             if (savedBoard != null)
             {
                 Bingo.SetByDataString(savedBoard);
             }
-
-            Bingo.BoardChanged += Bingo_BoardChanged;
         }
 
         private void Bingo_BoardChanged(string data)
         {
             // Save the current board in case of a crash
             SettingsManager.SetSavedLlamaBingo(data);
-
-            // Check the board for bingos
-            ConfettiEnabled = Bingo.HasBingo(out _);
-
-           
         }
 
         private async void SaveImage_Click(object sender, RoutedEventArgs e)
@@ -123,8 +119,6 @@ namespace UWPCommunity.Views.Subviews
             request.Data.Properties.Description = "Share your current Llamingo board";
             request.Data.Properties.ContentSourceApplicationLink = boardLink;
             //request.Data.Properties.Thumbnail = boardLink;
-
-           
         }
 
         public static async Task<WriteableBitmap> RenderUIElement(UIElement element)
@@ -145,10 +139,11 @@ namespace UWPCommunity.Views.Subviews
         {
             base.OnNavigatedTo(e);
 
-            var queryParams = e.Parameter as NameValueCollection;
-            if (queryParams?["board"] != null)
+            var queryParams = e.Parameter as Dictionary<string, string>;
+            if (queryParams != null && queryParams.ContainsKey("board"))
             {
-                Bingo.SetByDataString(queryParams["board"]);
+                Version boardVersion = queryParams.ContainsKey("version") ? new Version(queryParams["version"]) : null;
+                Bingo.SetByDataString(queryParams["board"], boardVersion);
             }
             else if (e.Parameter != null)
             {
@@ -157,14 +152,13 @@ namespace UWPCommunity.Views.Subviews
                 Bingo.SetByDataString(e.Parameter.ToString());
             }
 
-            CompactOverlayButton.IsChecked = 
-                ApplicationView.GetForCurrentView().ViewMode == ApplicationViewMode.CompactOverlay;
+            CompactOverlayButton.IsChecked = ApplicationView.GetForCurrentView().ViewMode == ApplicationViewMode.CompactOverlay;
         }
 
         private void ResetBoardButton_Click(object sender, RoutedEventArgs e)
         {
             Bingo.ResetBoard();
-            RecentBoards.Insert(0, Bingo.ToDataString());           
+            RecentBoards.Insert(0, Bingo.ToDataString());
         }
 
         private async void LoadLink_Click(object sender, RoutedEventArgs e)
@@ -173,13 +167,12 @@ namespace UWPCommunity.Views.Subviews
             if (clipboardPackage.Contains(StandardDataFormats.Text))
             {
                 string link = await clipboardPackage.GetTextAsync();
-
-                //TODO
-                //var queries = HttpUtility.ParseQueryString(link);
-                if (true)//(queries?["board"] != null)
+                var queries = new WwwFormUrlDecoder(link);
+                string board = queries.GetFirstValueByName("board");
+                if (board != null)
                 {
-                    //Bingo.SetByDataString(queries["board"]);
-                    //RecentBoards.Insert(0, queries["board"]);
+                    Bingo.SetByDataString(board);
+                    RecentBoards.Insert(0, board);
                     return;
                 }
             }
